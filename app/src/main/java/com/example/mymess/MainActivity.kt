@@ -16,11 +16,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.mymess.ui.theme.MyMessTheme
-import com.example.mymess.ui_for_admin.ProfileScreen
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Initialize Firebase
+        com.google.firebase.FirebaseApp.initializeApp(this)
+
         // Initialize Repository with Context for persistence
         com.example.mymess.data.StudentRepository.init(this)
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "362035618945",
+    "project_id": "commando-mess-c0ec6",
+    "storage_bucket": "commando-mess-c0ec6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362035618945:android:9e35015a489e9015ee5980",
+        "android_client_info": {
+          "package_name": "com.example.mymess"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnphIG7FWYEOdWj-kIienWHL0l9uWW3Es"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -258,9 +258,10 @@ fun AddStudentDialog(onDismiss: () -> Unit) {
     var mobile by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
-    // Plan Selection State
-    val plans = listOf("Breakfast", "Lunch", "Dinner")
-    val selectedPlans = remember { mutableStateListOf("Breakfast", "Lunch", "Dinner") }
+    var breakfastStr by remember { mutableStateOf("0") }
+    var lunchStr by remember { mutableStateOf("0") }
+    var dinnerStr by remember { mutableStateOf("0") }
+    var amountStr by remember { mutableStateOf("0") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -278,34 +279,34 @@ fun AddStudentDialog(onDismiss: () -> Unit) {
                     label = { Text("Mobile (10 Digits)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
-
-                Text(
-                    "Select Plan:",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(top = 8.dp)
+                
+                OutlinedTextField(
+                    value = breakfastStr,
+                    onValueChange = { breakfastStr = it },
+                    label = { Text("Breakfast Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
 
-                plans.forEach { plan ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (selectedPlans.contains(plan))
-                                    selectedPlans.remove(plan)
-                                else
-                                    selectedPlans.add(plan)
-                            }
-                    ) {
-                        Checkbox(
-                            checked = selectedPlans.contains(plan),
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) selectedPlans.add(plan) else selectedPlans.remove(plan)
-                            }
-                        )
-                        Text(text = plan)
-                    }
-                }
+                OutlinedTextField(
+                    value = lunchStr,
+                    onValueChange = { lunchStr = it },
+                    label = { Text("Lunch Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                OutlinedTextField(
+                    value = dinnerStr,
+                    onValueChange = { dinnerStr = it },
+                    label = { Text("Dinner Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                OutlinedTextField(
+                    value = amountStr,
+                    onValueChange = { amountStr = it },
+                    label = { Text("Amount Paid (₹)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
 
                 if (errorMessage.isNotEmpty()) {
                     Text(errorMessage, color = Color.Red, style = MaterialTheme.typography.bodySmall)
@@ -315,11 +316,16 @@ fun AddStudentDialog(onDismiss: () -> Unit) {
         confirmButton = {
             Button(
                 onClick = {
+                    val bfCount = breakfastStr.toIntOrNull() ?: 0
+                    val lnCount = lunchStr.toIntOrNull() ?: 0
+                    val dnCount = dinnerStr.toIntOrNull() ?: 0
+                    val amt = amountStr.toIntOrNull() ?: 0
+
                     if (name.isBlank() || mobile.length != 10) {
                         errorMessage = "Please enter valid details"
                         return@Button
                     }
-                    val result = StudentRepository.addStudent(name, mobile, selectedPlans)
+                    val result = StudentRepository.addStudent(name, mobile, bfCount, lnCount, dnCount, amt)
                     if (result.isSuccess) {
                         onDismiss()
                     } else {
@@ -338,6 +344,9 @@ fun AddStudentDialog(onDismiss: () -> Unit) {
 fun EditStudentDialog(student: Student, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf(student.name) }
     var mobile by remember { mutableStateOf(student.mobile) }
+    var breakfastStr by remember { mutableStateOf(student.remainingBreakfasts.toString()) }
+    var lunchStr by remember { mutableStateOf(student.remainingLunches.toString()) }
+    var dinnerStr by remember { mutableStateOf(student.remainingDinners.toString()) }
     var errorMessage by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -356,6 +365,24 @@ fun EditStudentDialog(student: Student, onDismiss: () -> Unit) {
                     label = { Text("Mobile (10 Digits)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+                OutlinedTextField(
+                    value = breakfastStr,
+                    onValueChange = { breakfastStr = it },
+                    label = { Text("Breakfast Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = lunchStr,
+                    onValueChange = { lunchStr = it },
+                    label = { Text("Lunch Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = dinnerStr,
+                    onValueChange = { dinnerStr = it },
+                    label = { Text("Dinner Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
                 if (errorMessage.isNotEmpty()) {
                     Text(errorMessage, color = Color.Red, style = MaterialTheme.typography.bodySmall)
                 }
@@ -364,7 +391,11 @@ fun EditStudentDialog(student: Student, onDismiss: () -> Unit) {
         confirmButton = {
             Button(
                 onClick = {
-                    val result = StudentRepository.updateStudent(student.id, name, mobile)
+                    val bfCount = breakfastStr.toIntOrNull() ?: 0
+                    val lnCount = lunchStr.toIntOrNull() ?: 0
+                    val dnCount = dinnerStr.toIntOrNull() ?: 0
+
+                    val result = StudentRepository.updateStudent(student.id, name, mobile, bfCount, lnCount, dnCount)
                     if (result.isSuccess) {
                         onDismiss()
                     } else {

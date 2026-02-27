@@ -19,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,8 +90,8 @@ fun StudentProfileScreen(
             RenewPlanDialog(
                 student = student,
                 onDismiss = { showRenewDialog = false },
-                onConfirm = { selectedPlans ->
-                    StudentRepository.renewStudent(student.id, selectedPlans)
+                onConfirm = { bf, ln, dn, amount ->
+                    StudentRepository.renewStudent(student.id, bf, ln, dn, amount)
                     showRenewDialog = false
                     scope.launch {
                         snackbarHostState.showSnackbar("Plan Renewed Successfully")
@@ -338,78 +340,64 @@ fun PaymentItemRow(payment: com.example.mymess.data.PaymentRecord) {
 }
 
 @Composable
-fun RenewPlanDialog(student: Student, onDismiss: () -> Unit, onConfirm: (List<String>) -> Unit) {
-    val plans = remember { mutableStateListOf("Breakfast", "Lunch", "Dinner") }
+fun RenewPlanDialog(student: Student, onDismiss: () -> Unit, onConfirm: (Int, Int, Int, Int) -> Unit) {
+    var breakfastStr by remember { mutableStateOf("0") }
+    var lunchStr by remember { mutableStateOf("0") }
+    var dinnerStr by remember { mutableStateOf("0") }
+    var amountStr by remember { mutableStateOf("") }
     
-    // Determine which plans are eligible for renewal (credits <= 0)
-    fun isEligible(plan: String): Boolean {
-        return when(plan) {
-            "Breakfast" -> student.remainingBreakfasts <= 0
-            "Lunch" -> student.remainingLunches <= 0
-            "Dinner" -> student.remainingDinners <= 0
-            else -> false
-        }
-    }
-
-    // Pre-select only eligible plans
-    val selectedPlans = remember { 
-        mutableStateListOf<String>().apply {
-            if (isEligible("Breakfast")) add("Breakfast")
-            if (isEligible("Lunch")) add("Lunch")
-            if (isEligible("Dinner")) add("Dinner")
-        }
-    }
+    val bfC = breakfastStr.toIntOrNull() ?: 0
+    val lnC = lunchStr.toIntOrNull() ?: 0
+    val dnC = dinnerStr.toIntOrNull() ?: 0
+    val amt = amountStr.toIntOrNull() ?: 0
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Renew Plan") },
         text = {
             Column {
-                Text("Select meals to renew (30/month each). Only empty plans can be renewed.", style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                plans.forEach { plan ->
-                    val eligible = isEligible(plan)
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = eligible) {
-                                if (selectedPlans.contains(plan)) selectedPlans.remove(plan) else selectedPlans.add(plan)
-                            }
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Checkbox(
-                            checked = selectedPlans.contains(plan),
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) selectedPlans.add(plan) else selectedPlans.remove(plan)
-                            },
-                            enabled = eligible
-                        )
-                        Column {
-                            Text(
-                                text = plan, 
-                                color = if (eligible) Color.Black else Color.Gray
-                            )
-                            if (!eligible) {
-                                Text(
-                                    text = "Credits remaining",
-                                    style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray, fontSize = 10.sp)
-                                )
-                            }
-                        }
-                    }
-                }
+                Text("Enter the number of meals to add and the payment amount.", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = breakfastStr,
+                    onValueChange = { breakfastStr = it },
+                    label = { Text("Breakfast Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                )
+                
+                OutlinedTextField(
+                    value = lunchStr,
+                    onValueChange = { lunchStr = it },
+                    label = { Text("Lunch Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                )
+                
+                OutlinedTextField(
+                    value = dinnerStr,
+                    onValueChange = { dinnerStr = it },
+                    label = { Text("Dinner Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                )
+
+                OutlinedTextField(
+                    value = amountStr,
+                    onValueChange = { amountStr = it },
+                    label = { Text("Amount (₹)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    if (selectedPlans.isNotEmpty()) {
-                        onConfirm(selectedPlans)
-                    }
+                    onConfirm(bfC, lnC, dnC, amt)
                 },
-                enabled = selectedPlans.isNotEmpty()
+                enabled = (bfC > 0 || lnC > 0 || dnC > 0) || amt > 0
             ) { Text("Confirm Renewal") }
         },
         dismissButton = {

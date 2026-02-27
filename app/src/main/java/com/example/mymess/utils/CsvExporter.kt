@@ -69,6 +69,71 @@ object CsvExporter {
         saveCsv(context, fileName, stringBuilder.toString())
     }
 
+    fun exportMasterReport(context: Context, date: Calendar) {
+        val monthStr = SimpleDateFormat("MMM_yyyy", Locale.getDefault()).format(date.time)
+        val fileName = "Mess_Master_Report_$monthStr.csv"
+
+        val stringBuilder = StringBuilder()
+
+        // --- SECTION 1: STUDENTS ---
+        stringBuilder.append("=== STUDENT REPORT ===\n")
+        stringBuilder.append("Student Name,Meals Left (B),Meals Left (L),Meals Left (D),Sun Specials,Payments This Month\n")
+        
+        val students = StudentRepository.students
+        
+        // Let's filter payments for this specific month for the report
+        val reportMonth = date.get(Calendar.MONTH)
+        val reportYear = date.get(Calendar.YEAR)
+
+        students.forEach { student ->
+            // Calculate total payments this month for this student
+            val payments = StudentRepository.getPaymentHistory(student.id)
+            var amountPaidThisMonth = 0
+            
+            payments.forEach { payment ->
+                val pDate = Calendar.getInstance().apply { timeInMillis = payment.date }
+                if (pDate.get(Calendar.MONTH) == reportMonth && pDate.get(Calendar.YEAR) == reportYear) {
+                    amountPaidThisMonth += payment.amount
+                }
+            }
+
+            stringBuilder.append("${student.name},${student.remainingBreakfasts},${student.remainingLunches},${student.remainingDinners},${student.remainingSundayMeals},Rs. $amountPaidThisMonth\n")
+        }
+
+        stringBuilder.append("\n\n") // Blank lines to separate sections
+        
+        // --- SECTION 2: EMPLOYEES ---
+        stringBuilder.append("=== EMPLOYEE REPORT ===\n")
+        stringBuilder.append("Employee Name,Monthly Salary,Total Advance Paid,Payment History\n")
+        
+        val employees = StudentRepository.employees
+        val formatter = SimpleDateFormat("dd MMM", Locale.getDefault())
+
+        employees.forEach { employee ->
+            val advances = StudentRepository.getEmployeeAdvances(employee.id)
+            var totalAdvancePaidThisMonth = 0.0
+            val historyBuilder = StringBuilder()
+
+            advances.forEach { payment ->
+                 val pDate = Calendar.getInstance().apply { timeInMillis = payment.date }
+                 if (pDate.get(Calendar.MONTH) == reportMonth && pDate.get(Calendar.YEAR) == reportYear) {
+                     if (!payment.isSalaryPayment) {
+                         totalAdvancePaidThisMonth += payment.amount
+                     }
+                     val type = if (payment.isSalaryPayment) "[Salary]" else "[Advance]"
+                     historyBuilder.append("$type Rs.${payment.amount} on ${formatter.format(Date(payment.date))} | ")
+                 }
+            }
+            
+            val historyStr = if (historyBuilder.isNotEmpty()) historyBuilder.toString().dropLast(3) else "No payments this month"
+            
+            // Note: Wrapping history in quotes handles commas inside the string for CSV format
+            stringBuilder.append("${employee.name},Rs. ${employee.monthlySalary},Rs. $totalAdvancePaidThisMonth,\"$historyStr\"\n")
+        }
+
+        saveCsv(context, fileName, stringBuilder.toString())
+    }
+
     private fun saveCsv(context: Context, fileName: String, content: String) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

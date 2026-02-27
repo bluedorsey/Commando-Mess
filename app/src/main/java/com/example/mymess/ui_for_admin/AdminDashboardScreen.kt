@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mymess.data.StudentRepository
+import com.example.mymess.utils.CsvExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -163,10 +164,36 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
                 val totalLn = StudentRepository.students.sumOf { it.lunchCount }
                 val totalDn = StudentRepository.students.sumOf { it.dinnerCount }
                 
-                AttendanceSummaryCard(totalBf, totalLn, totalDn)
+                var showResetDialog by remember { mutableStateOf(false) }
+
+                AttendanceSummaryCard(
+                    breakfast = totalBf, 
+                    lunch = totalLn, 
+                    dinner = totalDn,
+                    onResetClick = { showResetDialog = true }
+                )
+                
+                if (showResetDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showResetDialog = false },
+                        title = { Text("Reset Live Overview") },
+                        text = { Text("Are you sure you want to reset all live attendance counts to zero? This action cannot be undone.") },
+                        confirmButton = {
+                            Button(onClick = {
+                                StudentRepository.resetLiveAttendance()
+                                showResetDialog = false
+                                scope.launch { snackbarHostState.showSnackbar("Live attendance reset to zero.") }
+                            }) { Text("Confirm Reset") }
+                        },
+                        dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Cancel") } }
+                    )
+                }
 
                 // 4. Total Banner
                 TotalStudentsBanner(StudentRepository.students.size)
+                
+                // 5. Actions / Exports
+                ExportActionsCard()
             }
         }
     }
@@ -189,8 +216,8 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
         RenewPlanDialog(
             student = showRenewDialogForStudent!!,
             onDismiss = { showRenewDialogForStudent = null },
-            onConfirm = { selectedPlans ->
-                StudentRepository.renewStudent(showRenewDialogForStudent!!.id, selectedPlans)
+            onConfirm = { bf, ln, dn, amount ->
+                StudentRepository.renewStudent(showRenewDialogForStudent!!.id, bf, ln, dn, amount)
                 val sName = showRenewDialogForStudent!!.name
                 showRenewDialogForStudent = null
                 scope.launch {
@@ -287,7 +314,7 @@ fun MenuResCard(title: String, menu: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun AttendanceSummaryCard(breakfast: Int, lunch: Int, dinner: Int) {
+fun AttendanceSummaryCard(breakfast: Int, lunch: Int, dinner: Int, onResetClick: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -295,7 +322,12 @@ fun AttendanceSummaryCard(breakfast: Int, lunch: Int, dinner: Int) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Attendance Live Overview", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Attendance Live Overview", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                IconButton(onClick = onResetClick, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Reset Overview", tint = Color.Gray)
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 AttendanceStatItem(breakfast, "Breakfast")
@@ -381,6 +413,46 @@ fun TotalStudentsBanner(count: Int) {
                 "Total Students Registered: $count",
                 style = MaterialTheme.typography.titleMedium.copy(color = Color(0xFF00695C), fontWeight = FontWeight.Bold)
             )
+        }
+    }
+}
+
+@Composable
+fun ExportActionsCard() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Download, contentDescription = null, tint = Color(0xFF1E88E5), modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Reports & Exports",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B)
+                    )
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Button(
+                onClick = { 
+                    com.example.mymess.utils.CsvExporter.exportMasterReport(context, java.util.Calendar.getInstance()) 
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E88E5)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Outlined.TableView, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Export Master Report (Excel CSV)")
+            }
         }
     }
 }
