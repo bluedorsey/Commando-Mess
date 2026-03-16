@@ -11,13 +11,12 @@ enum class Screen(val route: String, val title: String, val icon: ImageVector? =
     Login("login", "Login"),
     AdminDashboard("admin_dashboard", "Home", Icons.Default.Home),
     StudentList("student_list", "Students", Icons.Default.Person),
-    StudentProfile("student_profile/{studentId}", "Student Profile"), // Dynamic route
+    StudentProfile("student_profile/{studentId}", "Student Profile"), 
     EmployeeList("employee_list", "Employees", Icons.Default.Work),
     EmployeeDetail("employee_detail/{employeeId}", "Employee Details"),
     UserDashboard("user_dashboard", "User Dashboard", Icons.Default.Home),
     Records("records", "Records", Icons.Default.DateRange);
 
-    // Helper to build dynamic route
     fun createRoute(vararg args: String): String {
         var res = route
         args.forEach { arg ->

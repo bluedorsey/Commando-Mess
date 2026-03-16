@@ -33,21 +33,15 @@ import com.example.mymess.data.StudentRepository
 fun NameOfStudentScreen(
     onStudentClick: (String) -> Unit
 ) {
-    // --- State ---
     var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
 
-    // These states hold the specific student object being acted upon. If null, dialog is hidden.
     var selectedStudentForOptions by remember { mutableStateOf<Student?>(null) }
     var showEditDialog by remember { mutableStateOf<Student?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Student?>(null) }
 
-    // --- Data ---
-    // Note: Ideally, this comes from a ViewModel observing a Flow/LiveData from the Repository.
-    // For now, we fetch the list.
     val allStudents = remember { StudentRepository.students }
 
-    // Filter logic
     val filteredStudents = remember(searchQuery, allStudents) {
         if (searchQuery.isBlank()) allStudents
         else allStudents.filter {
@@ -56,7 +50,6 @@ fun NameOfStudentScreen(
         }
     }
 
-    // --- UI Layout ---
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
@@ -74,7 +67,6 @@ fun NameOfStudentScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -87,10 +79,9 @@ fun NameOfStudentScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // The List
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                contentPadding = PaddingValues(bottom = 80.dp) 
             ) {
                 items(filteredStudents, key = { it.id }) { student ->
                     StudentListItem(
@@ -103,14 +94,11 @@ fun NameOfStudentScreen(
         }
     }
 
-    // --- Dialogs ---
 
-    // 1. Add Student Dialog
     if (showAddDialog) {
         AddStudentDialog(onDismiss = { showAddDialog = false })
     }
 
-    // 2. Options Dialog (appears on long press)
     if (selectedStudentForOptions != null) {
         val student = selectedStudentForOptions!!
         AlertDialog(
@@ -137,7 +125,6 @@ fun NameOfStudentScreen(
         )
     }
 
-    // 3. Edit Student Dialog
     if (showEditDialog != null) {
         EditStudentDialog(
             student = showEditDialog!!,
@@ -145,7 +132,6 @@ fun NameOfStudentScreen(
         )
     }
 
-    // 4. Delete Confirmation Dialog
     if (showDeleteDialog != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
@@ -170,7 +156,6 @@ fun NameOfStudentScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StudentListItem(student: Student, onClick: () -> Unit, onLongClick: () -> Unit) {
-    // Red Card Logic: if all balances are <= 0
     val isLowBalance = student.remainingBreakfasts <= 0 &&
             student.remainingLunches <= 0 &&
             student.remainingDinners <= 0
@@ -196,7 +181,6 @@ fun StudentListItem(student: Student, onClick: () -> Unit, onLongClick: () -> Un
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -214,7 +198,6 @@ fun StudentListItem(student: Student, onClick: () -> Unit, onLongClick: () -> Un
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Text Info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = student.name,
@@ -347,6 +330,13 @@ fun EditStudentDialog(student: Student, onDismiss: () -> Unit) {
     var breakfastStr by remember { mutableStateOf(student.remainingBreakfasts.toString()) }
     var lunchStr by remember { mutableStateOf(student.remainingLunches.toString()) }
     var dinnerStr by remember { mutableStateOf(student.remainingDinners.toString()) }
+    var sundayStr by remember { mutableStateOf(student.remainingSundayMeals.toString()) }
+
+    
+    var consumedBreakfastStr by remember { mutableStateOf(student.breakfastCount.toString()) }
+    var consumedLunchStr by remember { mutableStateOf(student.lunchCount.toString()) }
+    var consumedDinnerStr by remember { mutableStateOf(student.dinnerCount.toString()) }
+    
     var errorMessage by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -365,6 +355,10 @@ fun EditStudentDialog(student: Student, onDismiss: () -> Unit) {
                     label = { Text("Mobile (10 Digits)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("Remaining Meal Credits", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.Gray)
+
                 OutlinedTextField(
                     value = breakfastStr,
                     onValueChange = { breakfastStr = it },
@@ -383,6 +377,35 @@ fun EditStudentDialog(student: Student, onDismiss: () -> Unit) {
                     label = { Text("Dinner Meals") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+                OutlinedTextField(
+                    value = sundayStr,
+                    onValueChange = { sundayStr = it },
+                    label = { Text("Sunday Special Meals") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("Consumed Meals (This Month)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.Gray)
+
+                OutlinedTextField(
+                    value = consumedBreakfastStr,
+                    onValueChange = { consumedBreakfastStr = it },
+                    label = { Text("Consumed Breakfasts") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = consumedLunchStr,
+                    onValueChange = { consumedLunchStr = it },
+                    label = { Text("Consumed Lunches") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = consumedDinnerStr,
+                    onValueChange = { consumedDinnerStr = it },
+                    label = { Text("Consumed Dinners") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
                 if (errorMessage.isNotEmpty()) {
                     Text(errorMessage, color = Color.Red, style = MaterialTheme.typography.bodySmall)
                 }
@@ -394,8 +417,13 @@ fun EditStudentDialog(student: Student, onDismiss: () -> Unit) {
                     val bfCount = breakfastStr.toIntOrNull() ?: 0
                     val lnCount = lunchStr.toIntOrNull() ?: 0
                     val dnCount = dinnerStr.toIntOrNull() ?: 0
+                    val sunCount = sundayStr.toIntOrNull() ?: -1
 
-                    val result = StudentRepository.updateStudent(student.id, name, mobile, bfCount, lnCount, dnCount)
+                    val consumedBf = consumedBreakfastStr.toIntOrNull() ?: -1
+                    val consumedLn = consumedLunchStr.toIntOrNull() ?: -1
+                    val consumedDn = consumedDinnerStr.toIntOrNull() ?: -1
+
+                    val result = StudentRepository.updateStudent(student.id, name, mobile, bfCount, lnCount, dnCount, consumedBf, consumedLn, consumedDn, sunCount)
                     if (result.isSuccess) {
                         onDismiss()
                     } else {

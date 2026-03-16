@@ -21,15 +21,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize Firebase
         com.google.firebase.FirebaseApp.initializeApp(this)
 
-        // Initialize Repository with Context for persistence
         com.example.mymess.data.StudentRepository.init(this)
 
-        // --- FIXED 120Hz LOGIC ---
-        // This single block works for both old and new Android versions
-        // by finding the highest refresh rate mode and forcing the window to use it.
         val currentDisplay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             display
         } else {
@@ -44,9 +39,7 @@ class MainActivity : ComponentActivity() {
             params.preferredDisplayModeId = maxMode.modeId
             window.attributes = params
         }
-        // -------------------------
 
-        // Hiding System Bars (Immersive Mode)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT

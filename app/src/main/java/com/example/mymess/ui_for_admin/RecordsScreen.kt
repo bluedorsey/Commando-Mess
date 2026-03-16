@@ -36,8 +36,7 @@ fun RecordsScreen() {
     var showMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     
-    // View Mode: Day vs Month (Visual mostly, as per design Calendar is predominantly a Day picker)
-    var viewMode by remember { mutableStateOf("Day") } // "Day" or "Month"
+    var viewMode by remember { mutableStateOf("Day") } 
 
     Scaffold(
         topBar = {
@@ -79,124 +78,156 @@ fun RecordsScreen() {
                 .background(Color(0xFFF5F5F5))
                 .padding(padding)
         ) {
-            // 1. Calendar Header Section (Orange Background)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Color(0xFFFF5722),
-                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                    )
-                    .padding(bottom = 24.dp)
-            ) {
-                // Day / Month Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    ViewModeToggle(
-                        selectedMode = viewMode,
-                        onModeSelected = { viewMode = it }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Month Year Selector
-                MonthYearSelector(
-                    currentDate = selectedDate,
-                    onPreviousMonth = {
-                        val newCal = selectedDate.clone() as Calendar
-                        newCal.add(Calendar.MONTH, -1)
-                        selectedDate = newCal
-                    },
-                    onNextMonth = {
-                        val newCal = selectedDate.clone() as Calendar
-                        newCal.add(Calendar.MONTH, 1)
-                        selectedDate = newCal
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Calendar Grid Card
-                Card(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
-                ) {
-                    CalendarGrid(
-                        currentDate = selectedDate,
-                        onDateSelected = { newDate ->
-                            selectedDate = newDate
-                        }
-                    )
+            val allStudents = StudentRepository.students
+            
+            val studentsWithAttendance = remember(allStudents.size, allStudents.toList(), selectedDate) {
+                allStudents.associateWith { student ->
+                    val takenBf = StudentRepository.hasTakenMealOnDate(student.id, selectedDate.timeInMillis, "Breakfast")
+                    val takenLn = StudentRepository.hasTakenMealOnDate(student.id, selectedDate.timeInMillis, "Lunch")
+                    val takenDn = StudentRepository.hasTakenMealOnDate(student.id, selectedDate.timeInMillis, "Dinner")
+                    Triple(takenBf, takenLn, takenDn)
                 }
             }
 
-            // 2. Student Data Section
-            Column(modifier = Modifier.padding(16.dp).weight(1f)) {
+            val searchedStudents = if (searchQuery.isBlank()) allStudents else allStudents.filter {
+                it.name.contains(searchQuery, ignoreCase = true) || it.id.contains(searchQuery)
+            }
 
-                Text(
-                    "STUDENT DATA",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+            val studentsToShow = searchedStudents.filter { student ->
+                val attendance = studentsWithAttendance[student]
+                attendance != null && (attendance.first || attendance.second || attendance.third)
+            }
 
-                // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search by Name or ID") },
-                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                    modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(8.dp)),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color.LightGray,
-                        focusedBorderColor = Color(0xFFFF5722)
-                    )
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Color(0xFFFF5722),
+                                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                            )
+                            .padding(bottom = 24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            ViewModeToggle(
+                                selectedMode = viewMode,
+                                onModeSelected = { viewMode = it }
+                            )
+                        }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                // Student List Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White, RoundedCornerShape(8.dp))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Student Name", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                    Text("B", modifier = Modifier.width(30.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
-                    Text("L", modifier = Modifier.width(30.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
-                    Text("D", modifier = Modifier.width(30.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                        MonthYearSelector(
+                            currentDate = selectedDate,
+                            onPreviousMonth = {
+                                val newCal = selectedDate.clone() as Calendar
+                                newCal.add(Calendar.MONTH, -1)
+                                selectedDate = newCal
+                            },
+                            onNextMonth = {
+                                val newCal = selectedDate.clone() as Calendar
+                                newCal.add(Calendar.MONTH, 1)
+                                selectedDate = newCal
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Card(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+                        ) {
+                            CalendarGrid(
+                                currentDate = selectedDate,
+                                onDateSelected = { newDate ->
+                                    selectedDate = newDate
+                                }
+                            )
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                item {
+                    Column(modifier = Modifier.padding(16.dp)) {
 
-                // Student List
-                val allStudents = StudentRepository.students
-                // Filter students based on search query
-                val students = remember(searchQuery, allStudents.size, allStudents.toList()) {
-                     if (searchQuery.isBlank()) allStudents else allStudents.filter {
-                         it.name.contains(searchQuery, ignoreCase = true) || it.id.contains(searchQuery)
-                     }
+                        Text(
+                            "STUDENT DATA",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search by Name or ID") },
+                            leadingIcon = { Icon(Icons.Default.Search, null) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(8.dp)),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color.LightGray,
+                                focusedBorderColor = Color(0xFFFF5722)
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(8.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Student Name", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                            Text("B", modifier = Modifier.width(30.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                            Text("L", modifier = Modifier.width(30.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                            Text("D", modifier = Modifier.width(30.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
-                
-                if (students.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                         Text("No records found", color = Color.Gray)
+
+                if (studentsToShow.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp), contentAlignment = Alignment.Center) {
+                            
+                            if (searchQuery.isNotBlank() && searchedStudents.isNotEmpty()) {
+                                Text("This student hasn't taken a meal for it", color = Color.Gray)
+                            } else {
+                                Text("No records found", color = Color.Gray)
+                            }
+                        }
                     }
                 } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        items(students) { student ->
-                             StudentAttendanceRow(student = student, date = selectedDate)
-                        }
+                    items(studentsToShow) { student ->
+                         val attendance = studentsWithAttendance[student] ?: Triple(false, false, false)
+                         Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                             StudentAttendanceRowCached(
+                                 student = student, 
+                                 takenBf = attendance.first, 
+                                 takenLn = attendance.second, 
+                                 takenDn = attendance.third
+                             )
+                             Spacer(modifier = Modifier.height(8.dp))
+                         }
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -204,7 +235,6 @@ fun RecordsScreen() {
     }
 }
 
-// --- Components ---
 
 @Composable
 fun ViewModeToggle(selectedMode: String, onModeSelected: (String) -> Unit) {
@@ -268,16 +298,13 @@ fun MonthYearSelector(currentDate: Calendar, onPreviousMonth: () -> Unit, onNext
 
 @Composable
 fun CalendarGrid(currentDate: Calendar, onDateSelected: (Calendar) -> Unit) {
-    // Generate dates for the month
     val daysInMonth = remember(currentDate.timeInMillis) {
         getDaysInMonth(currentDate)
     }
     
-    // Day headers
     val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
     Column(modifier = Modifier.padding(16.dp)) {
-        // Headers
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             weekDays.forEach { day ->
                 Text(
@@ -292,16 +319,12 @@ fun CalendarGrid(currentDate: Calendar, onDateSelected: (Calendar) -> Unit) {
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Grid
         LazyVerticalGrid(
              columns = GridCells.Fixed(7),
-             modifier = Modifier.height(200.dp), // Fixed height for calendar
+             modifier = Modifier.height(200.dp), 
              userScrollEnabled = false
         ) {
-             // Empty spaces for start of month
              val firstDayOfWeek = daysInMonth.firstOrNull()?.get(Calendar.DAY_OF_WEEK) ?: Calendar.MONDAY
-             // Adjust 1(Sun)..7(Sat) to Mon start if needed. Java Calendar: Sun=1, Mon=2.
-             // Target: Mon(0)..Sun(6) layout
              val offset = if (firstDayOfWeek == Calendar.SUNDAY) 6 else firstDayOfWeek - 2
              
              items(offset) {
@@ -338,7 +361,17 @@ fun StudentAttendanceRow(student: com.example.mymess.data.Student, date: Calenda
     val takenBf = StudentRepository.hasTakenMealOnDate(student.id, dateInMillis, "Breakfast")
     val takenLn = StudentRepository.hasTakenMealOnDate(student.id, dateInMillis, "Lunch")
     val takenDn = StudentRepository.hasTakenMealOnDate(student.id, dateInMillis, "Dinner")
+    
+    StudentAttendanceRowCached(student, takenBf, takenLn, takenDn)
+}
 
+@Composable
+fun StudentAttendanceRowCached(
+    student: com.example.mymess.data.Student,
+    takenBf: Boolean,
+    takenLn: Boolean,
+    takenDn: Boolean
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -349,7 +382,6 @@ fun StudentAttendanceRow(student: com.example.mymess.data.Student, date: Calenda
              Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Avatar
                 Surface(
                     shape = CircleShape,
                     color = Color(0xFF5C6BC0),
@@ -366,7 +398,6 @@ fun StudentAttendanceRow(student: com.example.mymess.data.Student, date: Calenda
                 
                 Spacer(modifier = Modifier.width(12.dp))
                 
-                // Name & ID
                 Column(modifier = Modifier.weight(1f)) {
                     Text(student.name, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                     Text("ID: ${student.id} | B:${student.remainingBreakfasts} L:${student.remainingLunches} D:${student.remainingDinners}", style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray))
@@ -377,7 +408,6 @@ fun StudentAttendanceRow(student: com.example.mymess.data.Student, date: Calenda
             Divider(color = Color(0xFFEEEEEE))
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Status Icons Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -447,7 +477,6 @@ fun DownloadButton(text: String, containerColor: Color, textColor: Color = Color
     }
 }
 
-// --- Helpers ---
 
 fun getDaysInMonth(currentDate: Calendar): List<Calendar> {
     val days = mutableListOf<Calendar>()

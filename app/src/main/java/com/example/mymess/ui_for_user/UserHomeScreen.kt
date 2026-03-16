@@ -21,7 +21,6 @@ import androidx.navigation.NavController
 
 @Composable
 fun UserHomeScreen(navController: NavController) {
-    // Scaffold removed to integrate with MainAppNavigation's unified Scaffold
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -42,28 +41,25 @@ fun UserHomeScreen(navController: NavController) {
                 )
             )
 
-            // Breakfast Card
             MenuCard(
                 title = "Breakfast",
                 items = "Aloo Paratha, Curd, Tea",
                 time = "8:00 AM - 10:00 AM",
-                color = Color(0xFFFFCC80) // Light Orange
+                color = Color(0xFFFFCC80) 
             )
 
-            // Lunch Card
             MenuCard(
                 title = "Lunch",
                 items = "Rice, Dal Fry, Seasonal Vegetable, Roti, Salad",
                 time = "12:30 PM - 2:30 PM",
-                color = Color(0xFFFFAB91) // Light Red/Orange
+                color = Color(0xFFFFAB91) 
             )
 
-            // Dinner Card
             MenuCard(
                 title = "Dinner",
                 items = "Paneer Butter Masala, Roti, Rice, Gulab Jamun",
                 time = "7:30 PM - 9:30 PM",
-                color = Color(0xFFCE93D8) // Light Purple
+                color = Color(0xFFCE93D8) 
             )
         }
     }
@@ -83,7 +79,6 @@ fun MenuCard(title: String, items: String, time: String, color: Color) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon Box
             Box(
                 modifier = Modifier
                     .size(50.dp)

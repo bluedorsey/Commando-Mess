@@ -98,17 +98,13 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .height(50.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)) // Mess Theme Color
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)) 
         ) {
             Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        Text(
-            text = "Admin: 1/1 | User: user/user",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
-        )
+
     }
 }

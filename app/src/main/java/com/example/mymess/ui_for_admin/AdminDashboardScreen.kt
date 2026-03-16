@@ -34,55 +34,44 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
-    // Time-based Dynamic Button State
     var currentMealType by remember { mutableStateOf(getMealType()) }
     
-    // Update time every minute to ensure button stays correct
     LaunchedEffect(Unit) {
         while(true) {
             currentMealType = getMealType()
-            delay(60000) // Check every minute
+            delay(60000) 
         }
     }
 
     var studentNumberInput by remember { mutableStateOf("") }
     
-    // Menu Strings (simplified state for now)
-    // Menu Strings (Persistent)
     val breakfastMenu = StudentRepository.breakfastMenu
     val lunchMenu = StudentRepository.lunchMenu
     val dinnerMenu = StudentRepository.dinnerMenu
     
-    // Dialog
     var showEditDialog by remember { mutableStateOf(false) }
     var editingMealType by remember { mutableStateOf("") }
     var editingMenuValue by remember { mutableStateOf("") }
 
-    // Logic to mark attendance using Repository
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
-    // Renew Dialog State
     var showRenewDialogForStudent by remember { mutableStateOf<com.example.mymess.data.Student?>(null) }
 
     fun markAttendance() {
         if (studentNumberInput.isNotEmpty()) {
             val inputId = studentNumberInput.trim()
-            // Find student by EXACT ID first
             val student = StudentRepository.getStudent(inputId)
             
             if (student != null) {
                 val result = StudentRepository.markAttendance(student.id, currentMealType)
                 scope.launch {
                     if (result.isSuccess) {
-                        // UX: Hide Keyboard
                         keyboardController?.hide()
-                        // UX: Show Name in Snackbar
                         snackbarHostState.showSnackbar("Marked ${currentMealType} for ${student.name}")
-                        studentNumberInput = "" // Clear
+                        studentNumberInput = "" 
                     } else {
                          val errorMsg = result.exceptionOrNull()?.message ?: ""
                          if (errorMsg.contains("credits left")) {
-                             // Prompt to Renew
                              showRenewDialogForStudent = student
                          } else {
                              snackbarHostState.showSnackbar("Error: $errorMsg")
@@ -134,7 +123,6 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                 // 1. Menu Card
                 MenuCard(
                     breakfast = breakfastMenu,
                     lunch = lunchMenu,
@@ -150,16 +138,38 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
                     }
                 )
 
-                // 2. Dynamic Attendance Section
                 QuickAttendanceCard(
                     mealType = currentMealType,
                     inputValue = studentNumberInput,
                     onValueChange = { studentNumberInput = it },
-                    onMarkAttendance = { markAttendance() }
+                    onMarkAttendance = { markAttendance() },
+                    onHardcoreAttendance = { meal ->
+                        if (studentNumberInput.isNotEmpty()) {
+                            val inputId = studentNumberInput.trim()
+                            val student = StudentRepository.getStudent(inputId)
+                            if (student != null) {
+                                val result = StudentRepository.markHardcoreAttendance(student.id, meal)
+                                scope.launch {
+                                    if (result.isSuccess) {
+                                        keyboardController?.hide()
+                                        snackbarHostState.showSnackbar(result.getOrDefault(""))
+                                        studentNumberInput = ""
+                                    } else {
+                                        val errorMsg = result.exceptionOrNull()?.message ?: ""
+                                        if (errorMsg.contains("credits left")) {
+                                            showRenewDialogForStudent = student
+                                        } else {
+                                            snackbarHostState.showSnackbar("Error: $errorMsg")
+                                        }
+                                    }
+                                }
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("Student with ID $inputId not found!") }
+                            }
+                        }
+                    }
                 )
                 
-                 // 3. Stats based on Repository
-                // Calculate counts dynamically from repo
                 val totalBf = StudentRepository.students.sumOf { it.breakfastCount }
                 val totalLn = StudentRepository.students.sumOf { it.lunchCount }
                 val totalDn = StudentRepository.students.sumOf { it.dinnerCount }
@@ -189,16 +199,13 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
                     )
                 }
 
-                // 4. Total Banner
                 TotalStudentsBanner(StudentRepository.students.size)
                 
-                // 5. Actions / Exports
                 ExportActionsCard()
             }
         }
     }
     
-    // Edit Dialog
     if (showEditDialog) {
         MenuEditDialog(
             mealType = editingMealType,
@@ -211,7 +218,6 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
         )
     }
 
-    // Renew Dialog (Quick Action)
     if (showRenewDialogForStudent != null) {
         RenewPlanDialog(
             student = showRenewDialogForStudent!!,
@@ -228,7 +234,6 @@ fun AdminDashboardScreen(navController: androidx.navigation.NavController) {
     }
 }
 
-// Helper to determine meal type based on time
 fun getMealType(): String {
     val calendar = Calendar.getInstance()
     val hour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -236,9 +241,9 @@ fun getMealType(): String {
     
     val currentMinutes = hour * 60 + minute
     
-    val bfStart = 6 * 60 // 06:00
-    val bfEnd = 11 * 60 + 30 // 11:30
-    val lunchEnd = 17 * 60 // 17:00
+    val bfStart = 6 * 60 
+    val bfEnd = 11 * 60 + 30 
+    val lunchEnd = 17 * 60 
     
     return when {
         currentMinutes >= bfStart && currentMinutes < bfEnd -> "Breakfast"
@@ -247,7 +252,6 @@ fun getMealType(): String {
     }
 }
 
-// --- Components ---
 
 @Composable
 fun MenuEditDialog(
@@ -351,7 +355,8 @@ fun QuickAttendanceCard(
     mealType: String,
     inputValue: String,
     onValueChange: (String) -> Unit,
-    onMarkAttendance: () -> Unit
+    onMarkAttendance: () -> Unit,
+    onHardcoreAttendance: (String) -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -360,13 +365,51 @@ fun QuickAttendanceCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Schedule, null, tint = Color.Gray)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Current Meal: $mealType",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Schedule, null, tint = Color.Gray)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Current Meal: $mealType",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    )
+                }
+                Box {
+                    var expanded by remember { mutableStateOf(false) }
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(Icons.Default.Info, contentDescription = "Hardcore Mode", tint = Color.Gray)
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Hardcore: Breakfast") },
+                            onClick = { 
+                                expanded = false
+                                onHardcoreAttendance("Breakfast")
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Hardcore: Lunch") },
+                            onClick = { 
+                                expanded = false
+                                onHardcoreAttendance("Lunch")
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Hardcore: Dinner") },
+                            onClick = { 
+                                expanded = false
+                                onHardcoreAttendance("Dinner")
+                            }
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.height(16.dp))

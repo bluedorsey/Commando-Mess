@@ -29,14 +29,11 @@ import androidx.compose.animation.core.tween
 fun MainAppNavigation() {
     val navController = rememberNavController()
 
-    // Determine if we should show the bottom bar
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
     val showBottomBar = currentDestination?.route != Screen.Login.route
 
-    // Define Navigation Items for Roles
-    // Define Navigation Items for Roles
     val adminNavItems = listOf(
         Screen.AdminDashboard,
         Screen.StudentList,
@@ -44,18 +41,11 @@ fun MainAppNavigation() {
         Screen.EmployeeList
     )
     
-    // For User, currently we only have Dashboard. 
-    // We can add more user-specific screens later (e.g., Profile, Complaints).
     val userNavItems = listOf(
         Screen.UserDashboard
-        // Screen.UserProfile // Example for future
     )
 
-    // Determine which items to show based on current route
-    // We can infer the role based on the current screen. 
-    // If the user is on a User screen, show User Nav. If Admin, show Admin Nav.
     val isUserRoute = currentDestination?.route == Screen.UserDashboard.route 
-    // Add other user routes here using || comparison if needed
 
     val navItems = if (isUserRoute) userNavItems else adminNavItems
 
@@ -77,16 +67,10 @@ fun MainAppNavigation() {
                             selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                             onClick = {
                                 navController.navigate(screen.route) {
-                                    // Pop up to the start destination of the graph to
-                                    // avoid building up a large stack of destinations
-                                    // on the back stack as users select items
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
                                     }
-                                    // Avoid multiple copies of the same destination when
-                                    // reselecting the same item
                                     launchSingleTop = true
-                                    // Restore state when reselecting a previously selected item
                                     restoreState = true
                                 }
                             },
@@ -141,7 +125,6 @@ fun MainAppNavigation() {
                 UserHomeScreen(navController)
             }
             composable(Screen.StudentList.route) {
-                // Pass a callback to navigate to profile
                 NameOfStudentScreen(
                     onStudentClick = { studentId ->
                        navController.navigate(Screen.StudentProfile.createRoute(studentId))

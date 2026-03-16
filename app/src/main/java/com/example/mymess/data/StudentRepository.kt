@@ -15,7 +15,6 @@ import java.util.Locale
 import java.util.UUID
 import kotlin.math.max
 
-// --- Data Models (Top Level) ---
 
 data class Student(
     var id: String = "",
@@ -27,7 +26,6 @@ data class Student(
     
     var mobile: String = "",
     
-    // Meals Logic -- Split by Type
     var remainingBreakfasts: Int = 0,
     
     var remainingLunches: Int = 0,
@@ -36,12 +34,10 @@ data class Student(
     
     var remainingSundayMeals: Int = 4,
 
-    // Daily Stats
     var breakfastCount: Int = 0,
     var lunchCount: Int = 0,
     var dinnerCount: Int = 0,
 
-    // State
     var lastAttendanceDate: Long = 0,
     var lastBreakfastDate: Long = 0,
     var lastLunchDate: Long = 0,
@@ -68,7 +64,6 @@ data class Employee(
     @set:PropertyName("Total Advances")
     var totalAdvances: Double = 0.0
 ) {
-    // No-arg constructor for Firestore
     constructor() : this("", "", "", "", 0.0, 0.0)
 }
 
@@ -78,7 +73,7 @@ data class EmployeeAdvance(
     var amount: Double = 0.0,
     var date: Long = 0,
     var note: String = "",
-    var isSalaryPayment: Boolean = false // Added to differentiate salary payments from advances
+    var isSalaryPayment: Boolean = false 
 )
 
 data class PaymentRecord(
@@ -98,7 +93,6 @@ object StudentRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private var context: android.content.Context? = null
 
-    // Listener Registrations
     private var studentsListener: ListenerRegistration? = null
     private var employeesListener: ListenerRegistration? = null
     private var advancesListener: ListenerRegistration? = null
@@ -106,9 +100,7 @@ object StudentRepository {
     private var logsListener: ListenerRegistration? = null
     private var menuListener: ListenerRegistration? = null
 
-    // State Holders
     private val _students = mutableStateListOf<Student>()
-    // This helper property is used by the UI
     val students: List<Student> get() = _students
 
     private val _employees = mutableStateListOf<Employee>()
@@ -125,10 +117,8 @@ object StudentRepository {
     val attendanceLogs: List<AttendanceLog> get() = _attendanceLogs
 
 
-    // Archives (Memory only for now, or save if needed)
     private val _archivedStudents = mutableListOf<Student>()
 
-    // --- Menu State ---
     var breakfastMenu by mutableStateOf("")
         private set
     var lunchMenu by mutableStateOf("")
@@ -136,7 +126,6 @@ object StudentRepository {
     var dinnerMenu by mutableStateOf("")
         private set
 
-    // --- Initialization ---
     fun init(context: android.content.Context) {
         this.context = context
         setupSnapshotListeners()
@@ -151,7 +140,6 @@ object StudentRepository {
                     for (doc in snapshot.documents) {
                         try {
                             doc.toObject(Student::class.java)?.let { student ->
-                                // If the document ID was their name (like they tested), use doc.id as the name if it's missing
                                 if (student.name.isBlank()) student.name = doc.id
                                 _students.add(student)
                             }
@@ -171,7 +159,7 @@ object StudentRepository {
                         try {
                             val emp = doc.toObject(Employee::class.java)
                             if (emp != null) {
-                                emp.id = doc.id // Ensure ID is correct
+                                emp.id = doc.id 
                                 _employees.add(emp)
                             }
                         } catch (e: Exception) {
@@ -258,7 +246,6 @@ object StudentRepository {
                     lunchMenu = snapshot.getString("lunch") ?: "Rice, Dal Fry, Seasonal Veg"
                     dinnerMenu = snapshot.getString("dinner") ?: "Paneer, Roti, Rice"
                 } else {
-                    // Document doesn't exist yet, construct defaults
                     val defaultMenu = mapOf(
                         "breakfast" to "Aloo Paratha, Curd, Tea",
                         "lunch" to "Rice, Dal Fry, Seasonal Veg",
@@ -275,7 +262,6 @@ object StudentRepository {
         return _students.find { it.id == id || it.name == id }
     }
 
-    // --- CRUD Operations ---
 
     fun addStudent(name: String, mobile: String, breakfastCount: Int, lunchCount: Int, dinnerCount: Int, amount: Int): Result<String> {
         if (name.isBlank()) return Result.failure(Exception("Name cannot be empty"))
@@ -291,12 +277,12 @@ object StudentRepository {
 
         val sun = dinnerCount / 7
 
-        val newId = generateUniqueId() // Generate the 4-digit random ID
-        val docId = name.trim() // Using Name as the Document ID in Firestore
+        val newId = generateUniqueId() 
+        val docId = name.trim() 
         
         val newStudent = Student(
-            id = newId, // Storing the 4-digit ID in the document
-            docId = docId, // Track the precise document ID
+            id = newId, 
+            docId = docId, 
             name = name,
             mobile = mobile,
             remainingBreakfasts = breakfastCount,
@@ -330,48 +316,46 @@ object StudentRepository {
         return Result.success("Student Added")
     }
 
-    fun updateStudent(id: String, name: String, mobile: String, breakfastCount: Int, lunchCount: Int, dinnerCount: Int): Result<String> {
+    fun updateStudent(id: String, name: String, mobile: String, breakfastCount: Int, lunchCount: Int, dinnerCount: Int, consumedBreakfasts: Int = -1, consumedLunches: Int = -1, consumedDinners: Int = -1, sundayMeals: Int = -1): Result<String> {
         val student = _students.find { it.id == id || it.name == id }
         if (student == null) return Result.failure(Exception("Student not found"))
 
         if (name.isBlank()) return Result.failure(Exception("Name cannot be empty"))
         if (mobile.length != 10) return Result.failure(Exception("Invalid Mobile"))
 
-        // Check duplicate but exclude self
         if (isMobileDuplicate(mobile, excludeId = student.id)) {
             return Result.failure(Exception("Mobile already exists"))
         }
 
-        // The document ID is explicitly tracked in docId. 
-        // If they change their name, we actually need to migrate the document, but for now we'll just update fields.
+        val updates = mutableMapOf<String, Any>(
+            "name" to name, 
+            "mobile" to mobile,
+            "remainingBreakfasts" to breakfastCount,
+            "remainingLunches" to lunchCount,
+            "remainingDinners" to dinnerCount
+        )
+
+        if (consumedBreakfasts >= 0) updates["breakfastCount"] = consumedBreakfasts
+        if (consumedLunches >= 0) updates["lunchCount"] = consumedLunches
+        if (consumedDinners >= 0) updates["dinnerCount"] = consumedDinners
+        if (sundayMeals >= 0) updates["remainingSundayMeals"] = sundayMeals
+
         firestore.collection("Student_detail").document(student.docId)
-            .update(
-                mapOf(
-                    "name" to name, // Ensure lowercase field matches new struct
-                    "mobile" to mobile,
-                    "remainingBreakfasts" to breakfastCount,
-                    "remainingLunches" to lunchCount,
-                    "remainingDinners" to dinnerCount
-                )
-            ).addOnFailureListener { e -> e.printStackTrace() }
+            .update(updates).addOnFailureListener { e -> e.printStackTrace() }
         return Result.success("Updated")
     }
 
     fun removeStudent(studentId: String) {
         val student = _students.find { it.id == studentId || it.name == studentId }
         if (student != null) {
-            _archivedStudents.add(student) // Optional: Save archive to disk if needed
+            _archivedStudents.add(student) 
             firestore.collection("Student_detail").document(student.docId).delete()
                 .addOnFailureListener { e -> e.printStackTrace() }
         }
     }
 
-    // --- Meal & Attendance Logic ---
 
     fun hasTakenMealOnDate(studentId: String, date: Long, mealType: String): Boolean {
-        // Simple check: check if any log exists for this student, this date, this meal type
-        // Note: 'date' passed here is usually start of day or similar. 
-        // We need to check if the timestamp in log falls on the same calendar day.
         
         val callDate = Calendar.getInstance().apply { timeInMillis = date }
         val callDay = callDate.get(Calendar.DAY_OF_YEAR)
@@ -400,7 +384,6 @@ object StudentRepository {
         }
     }
     
-    // Live attendance overview should only return today's logs
     val todaysAttendanceLogs: List<AttendanceLog> get() {
         val now = System.currentTimeMillis()
         return getAttendanceForDate(now)
@@ -409,16 +392,13 @@ object StudentRepository {
     fun markAttendance(studentId: String, mealType: String): Result<String> {
         val student = _students.find { it.id == studentId || it.name == studentId } ?: return Result.failure(Exception("Student not found"))
         
-        // 1. Check if already taken today
         if (hasTakenMealOnDate(studentId, System.currentTimeMillis(), mealType)) {
              return Result.failure(Exception("Already marked for $mealType today"))
         }
 
-        // 2. Check Balance & Sunday Rules
         val calendar = Calendar.getInstance()
         val isSunday = calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
 
-        // Logic split by meal type
         var s = student.copy()
         var successMessage = "Attendance Marked for $mealType"
 
@@ -456,7 +436,6 @@ object StudentRepository {
 
         s.lastAttendanceDate = System.currentTimeMillis()
         
-        // Format date string for 'last meal took' field based on requested schema
         val sdf = SimpleDateFormat("dd MMMM yyyy 'at' HH:mm:ss", Locale.getDefault())
         s.lastMealTook = sdf.format(Date(s.lastAttendanceDate))
 
@@ -468,7 +447,7 @@ object StudentRepository {
         val logRef = firestore.collection("attendanceLogs").document(logId)
         val logData = hashMapOf(
             "studentId" to student.id,
-            "timestamp" to java.util.Date(), // Date object becomes Firebase Timestamp
+            "timestamp" to java.util.Date(), 
             "mealType" to mealType
         )
         batch.set(logRef, logData)
@@ -479,16 +458,88 @@ object StudentRepository {
         return Result.success(successMessage)
     }
 
-    // --- Reset Attendance Logic ---
+    fun markHardcoreAttendance(studentId: String, mealType: String): Result<String> {
+        val student = _students.find { it.id == studentId || it.name == studentId } ?: return Result.failure(Exception("Student not found"))
+        
+        if (hasTakenMealOnDate(studentId, System.currentTimeMillis(), mealType)) {
+             return Result.failure(Exception("Already marked for $mealType today"))
+        }
+
+        var s = student.copy()
+        var successMessage = "Hardcore Attendance Marked for $mealType"
+
+        fun deductCredit(): String? {
+            if (mealType == "Breakfast") {
+                if (s.remainingBreakfasts > 0) { s.remainingBreakfasts--; return "Breakfast" }
+                if (s.remainingLunches > 0) { s.remainingLunches--; return "Lunch" }
+                if (s.remainingDinners > 0) { s.remainingDinners--; return "Dinner" }
+            } else if (mealType == "Lunch") {
+                if (s.remainingLunches > 0) { s.remainingLunches--; return "Lunch" }
+                if (s.remainingDinners > 0) { s.remainingDinners--; return "Dinner" }
+                if (s.remainingBreakfasts > 0) { s.remainingBreakfasts--; return "Breakfast" }
+            } else if (mealType == "Dinner") {
+                if (s.remainingDinners > 0) { s.remainingDinners--; return "Dinner" }
+                if (s.remainingLunches > 0) { s.remainingLunches--; return "Lunch" }
+                if (s.remainingBreakfasts > 0) { s.remainingBreakfasts--; return "Breakfast" }
+            }
+            return null
+        }
+
+        val deductedFrom = deductCredit()
+        if (deductedFrom == null) {
+            return Result.failure(Exception("No credits left to deduct!"))
+        }
+
+        when(mealType) {
+            "Breakfast" -> {
+                s.breakfastCount++
+                s.lastBreakfastDate = System.currentTimeMillis()
+            }
+            "Lunch" -> {
+                s.lunchCount++
+                s.lastLunchDate = System.currentTimeMillis()
+            }
+            "Dinner" -> {
+                 s.dinnerCount++
+                 s.lastDinnerDate = System.currentTimeMillis()
+            }
+        }
+
+        if (deductedFrom != mealType) {
+            successMessage += " (Deducted from $deductedFrom)"
+        }
+
+        s.lastAttendanceDate = System.currentTimeMillis()
+        
+        val sdf = SimpleDateFormat("dd MMMM yyyy 'at' HH:mm:ss", Locale.getDefault())
+        s.lastMealTook = sdf.format(Date(s.lastAttendanceDate))
+
+        val batch = firestore.batch()
+        val studentRef = firestore.collection("Student_detail").document(student.docId)
+        batch.set(studentRef, s)
+
+        val logId = "${student.name}_${System.currentTimeMillis()}"
+        val logRef = firestore.collection("attendanceLogs").document(logId)
+        val logData = hashMapOf(
+            "studentId" to student.id,
+            "timestamp" to java.util.Date(), 
+            "mealType" to mealType
+        )
+        batch.set(logRef, logData)
+
+        batch.commit()
+            .addOnFailureListener { e -> e.printStackTrace() }
+        
+        return Result.success(successMessage)
+    }
+
     fun resetLiveAttendance() {
-        // Reset local state for UI updates
         _students.forEach { 
             it.breakfastCount = 0
             it.lunchCount = 0
             it.dinnerCount = 0
         }
         
-        // Push batch reset to Firestore
         val batch = firestore.batch()
         _students.forEach { student ->
             val ref = firestore.collection("Student_detail").document(student.docId)
@@ -504,7 +555,6 @@ object StudentRepository {
             .addOnFailureListener { e -> e.printStackTrace() }
     }
 
-    // --- Renewal & Financials ---
 
     fun renewStudent(studentId: String, breakfastCount: Int, lunchCount: Int, dinnerCount: Int, amount: Int) {
          val student = _students.find { it.id == studentId || it.name == studentId } ?: return
@@ -514,16 +564,18 @@ object StudentRepository {
          s.remainingLunches += lunchCount
          s.remainingDinners += dinnerCount
          
-         // Automatically add 1 Sunday meal per 7 dinners, if dinner was renewed
          if (dinnerCount > 0) {
              s.remainingSundayMeals += (dinnerCount / 7)
          }
+
+         s.breakfastCount = 0
+         s.lunchCount = 0
+         s.dinnerCount = 0
          
          val batch = firestore.batch()
          val studentRef = firestore.collection("Student_detail").document(student.docId)
          batch.set(studentRef, s)
          
-         // Record Payment
          val paymentId = "${student.name}_${System.currentTimeMillis()}"
          val paymentData = hashMapOf(
              "id" to paymentId,
@@ -547,7 +599,6 @@ object StudentRepository {
         }.sortedByDescending { it.date }
     }
 
-    // --- Admin / Employee functions ---
 
     fun updateMenu(mealType: String, newMenu: String) {
         val update = mapOf(mealType.lowercase() to newMenu)
@@ -580,11 +631,9 @@ object StudentRepository {
     fun deleteEmployee(employeeId: String) {
         val batch = firestore.batch()
         
-        // Delete employee document
         val employeeRef = firestore.collection("Employee").document(employeeId)
         batch.delete(employeeRef)
         
-        // Optionally delete all advances linked to this employee to clean up history
         _employeeAdvances.filter { it.employeeId == employeeId }.forEach { advance ->
             val advanceRef = firestore.collection("employeeAdvances").document(advance.id)
             batch.delete(advanceRef)
@@ -658,9 +707,6 @@ object StudentRepository {
         val salaryPaymentRecord = EmployeeAdvance(
             id = newId,
             employeeId = employeeId,
-            // Per user request: when clicked to pay salary total advance will become 0 
-            // and net salary should equal to monthly salary (but payment history should be there)
-            // Storing the *actual net payout* in the record
             amount = netSalary, 
             date = System.currentTimeMillis(),
             note = "Salary Paid",
@@ -669,11 +715,9 @@ object StudentRepository {
 
         val batch = firestore.batch()
 
-        // 1. Record the salary payment in the advances/transactions collection
         val advanceRef = firestore.collection("employeeAdvances").document(newId)
         batch.set(advanceRef, salaryPaymentRecord)
 
-        // 2. Reset the employee's total advances to 0 since the salary cycle is complete
         val employeeRef = firestore.collection("Employee").document(employeeId)
         batch.update(employeeRef, "Total Advances", 0.0)
 
@@ -681,12 +725,10 @@ object StudentRepository {
             .addOnFailureListener { it.printStackTrace() }
     }
     
-    // This returns both advances and salary payments to act as a unified statement
     fun getEmployeeAdvances(employeeId: String): List<EmployeeAdvance> {
         return _employeeAdvances.filter { it.employeeId == employeeId }.sortedByDescending { it.date }
     }
 
-    // --- Helpers ---
 
     private fun generateUniqueId(): String {
         var id: String

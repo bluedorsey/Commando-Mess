@@ -16,15 +16,12 @@ class AuthViewModel : ViewModel() {
             return
         }
 
-        // Fake Authentication Logic
-        // Admin: admin / admin
-        // User: user / user
-        if (username == "1" && password == "1") {
+        if (username == "kuldeep@admin" && password == "1234") {
             loginError = null
-            onSuccess(true) // true = isAdmin
+            onSuccess(true) 
         } else if (username == "user" && password == "user") {
             loginError = null
-            onSuccess(false) // false = isUser
+            onSuccess(false) 
         } else {
             loginError = "Invalid credentials"
         }

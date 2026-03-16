@@ -36,7 +36,6 @@ fun StudentProfileScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     
-    // Lookup student from Repository (Live Update)
     val student = StudentRepository.students.find { it.id == studentId }
 
     if (student == null) {
@@ -61,23 +60,18 @@ fun StudentProfileScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Profile Header Card
             ProfileDetailCard(student)
             
-            // 2. Credits Card (New)
             CreditsCard(
                 student = student,
                 onRenew = { showRenewDialog = true }
             )
 
-            // 3. Meal Summary Card
             SummaryCard(student, totalMeals)
 
-            // 4. Payment/Renewal History (New)
             val paymentHistory = StudentRepository.getPaymentHistory(student.id)
             PaymentHistoryCard(paymentHistory)
 
-            // 5. Attendance History Card
             HistoryCard(student)
         }
         
@@ -102,7 +96,6 @@ fun StudentProfileScreen(
     }
 }
 
-// --- Helper Components ---
 
 @Composable
 fun ProfileDetailCard(student: Student) {
@@ -116,13 +109,12 @@ fun ProfileDetailCard(student: Student) {
             modifier = Modifier.padding(24.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Circular Avatar
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFFF5722)) // Orange
+                    .background(Color(0xFFFF5722)) 
             ) {
                 Text(
                     text = student.name.firstOrNull()?.toString() ?: "",
@@ -132,7 +124,6 @@ fun ProfileDetailCard(student: Student) {
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // Name
             Text(
                 text = student.name,
                 style = MaterialTheme.typography.headlineSmall.copy(
@@ -141,12 +132,10 @@ fun ProfileDetailCard(student: Student) {
                 )
             )
             Spacer(modifier = Modifier.height(4.dp))
-            // Details
             Text(
                 text = "ID: ${student.id}",
                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
             )
-            // Number removed as per request
             Text(
                 text = "Mobile: ${student.mobile}",
                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
@@ -258,7 +247,7 @@ fun SummaryCard(student: Student, totalMeals: Int) {
                     text = totalMeals.toString(),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E7D32) // Green
+                        color = Color(0xFF2E7D32) 
                     )
                 )
             }

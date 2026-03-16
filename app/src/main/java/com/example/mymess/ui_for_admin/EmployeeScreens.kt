@@ -33,9 +33,8 @@ fun EmployeeListScreen(
     onEmployeeClick: (String) -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
-    // We add a refresh trigger here too, just in case adding an employee needs an immediate UI refresh
     var refreshTrigger by remember { mutableIntStateOf(0) }
-    refreshTrigger // Observe for recomposition
+    refreshTrigger 
 
     val employees = StudentRepository.employees
 
@@ -85,7 +84,7 @@ fun EmployeeListScreen(
         AddEmployeeDialog(
             onDismiss = { showAddDialog = false },
             onSave = {
-                refreshTrigger++ // Refresh list after adding
+                refreshTrigger++ 
             }
         )
     }
@@ -145,7 +144,7 @@ fun AddEmployeeDialog(onDismiss: () -> Unit, onSave: () -> Unit = {}) {
             Button(onClick = {
                 if(name.isNotBlank() && role.isNotBlank()) {
                     StudentRepository.addEmployee(name, role, mobile)
-                    onSave() // Trigger UI refresh
+                    onSave() 
                     onDismiss()
                 }
             }) { Text("Add") }
@@ -156,20 +155,15 @@ fun AddEmployeeDialog(onDismiss: () -> Unit, onSave: () -> Unit = {}) {
 
 @Composable
 fun EmployeeProfileScreen(employeeId: String) {
-    // TRIGGER ADDED HERE
     var refreshTrigger by remember { mutableIntStateOf(0) }
-    refreshTrigger // Tells Compose to re-run this screen when incremented
+    refreshTrigger 
 
     val employee = StudentRepository.employees.find { it.id == employeeId }
     val advances = StudentRepository.getEmployeeAdvances(employeeId)
 
-    // Use the actual Total Advances value from the employee object, which is properly reset
     val totalAdvances = employee?.totalAdvances ?: 0.0
     
-    // Net salary should be calculated
     val monthlySalary = employee?.monthlySalary ?: 0.0
-    // If they took more advance than their salary, display a negative/zero appropriately. 
-    // The user requested net salary = monthly salary - advance.
     val netSalary = monthlySalary - totalAdvances
 
     var showEditSalaryDialog by remember { mutableStateOf(false) }
@@ -203,7 +197,6 @@ fun EmployeeProfileScreen(employeeId: String) {
                     modifier = Modifier.padding(24.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Action Icons at Top Right
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
@@ -244,7 +237,6 @@ fun EmployeeProfileScreen(employeeId: String) {
                 }
             }
 
-            // Salary Details Card
             SalaryDetailsCard(
                 monthlySalary = employee.monthlySalary,
                 totalAdvances = totalAdvances,
@@ -253,13 +245,12 @@ fun EmployeeProfileScreen(employeeId: String) {
                 onPayClick = { showPaySalaryDialog = true }
             )
 
-            // Advance Payments Card
             AdvancePaymentsCard(
                 advances = advances,
                 onAddClick = { showAddAdvanceDialog = true },
                 onRevokeClick = { advanceId ->
                     StudentRepository.revokeEmployeeAdvance(advanceId)
-                    refreshTrigger++ // Refresh after deleting an advance
+                    refreshTrigger++ 
                 }
             )
         }
@@ -272,7 +263,7 @@ fun EmployeeProfileScreen(employeeId: String) {
             onSave = { newSalary ->
                 StudentRepository.updateEmployeeSalary(employee.id, newSalary)
                 showEditSalaryDialog = false
-                refreshTrigger++ // Refresh after editing salary
+                refreshTrigger++ 
             }
         )
     }
@@ -283,7 +274,7 @@ fun EmployeeProfileScreen(employeeId: String) {
             onSave = { amount, note ->
                 StudentRepository.addEmployeeAdvance(employee.id, amount, note)
                 showAddAdvanceDialog = false
-                refreshTrigger++ // Refresh after adding advance
+                refreshTrigger++ 
             }
         )
     }
@@ -297,7 +288,7 @@ fun EmployeeProfileScreen(employeeId: String) {
                 Button(onClick = {
                     StudentRepository.payEmployeeSalary(employee.id)
                     showPaySalaryDialog = false
-                    refreshTrigger++ // Refresh after paying salary
+                    refreshTrigger++ 
                 }) { Text("Confirm Payment") }
             },
             dismissButton = { TextButton(onClick = { showPaySalaryDialog = false }) { Text("Cancel") } }
@@ -311,7 +302,7 @@ fun EmployeeProfileScreen(employeeId: String) {
             onSave = { name, role, mobile ->
                 StudentRepository.updateEmployee(employee.id, name, role, mobile)
                 showEditEmployeeDialog = false
-                refreshTrigger++ // Refresh after editing details
+                refreshTrigger++ 
             }
         )
     }
@@ -326,7 +317,6 @@ fun EmployeeProfileScreen(employeeId: String) {
                     onClick = {
                         StudentRepository.deleteEmployee(employee.id)
                         showDeleteEmployeeDialog = false
-                        // Note: Depending on your navigation setup, you might want to call a nav back function here instead of refreshing
                         refreshTrigger++
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
@@ -346,7 +336,6 @@ fun SalaryDetailsCard(monthlySalary: Double, totalAdvances: Double, netSalary: D
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -361,7 +350,7 @@ fun SalaryDetailsCard(monthlySalary: Double, totalAdvances: Double, netSalary: D
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
-                        color = Color(0xFFE8F5E9), // Light Green
+                        color = Color(0xFFE8F5E9), 
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.clickable { onPayClick() }
                     ) {
@@ -372,7 +361,7 @@ fun SalaryDetailsCard(monthlySalary: Double, totalAdvances: Double, netSalary: D
                         )
                     }
                     Surface(
-                        color = Color(0xFFFFE0B2), // Light Orange
+                        color = Color(0xFFFFE0B2), 
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.clickable { onEditClick() }
                     ) {
@@ -387,7 +376,6 @@ fun SalaryDetailsCard(monthlySalary: Double, totalAdvances: Double, netSalary: D
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Monthly Salary
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.AttachMoney,
@@ -401,7 +389,7 @@ fun SalaryDetailsCard(monthlySalary: Double, totalAdvances: Double, netSalary: D
                     Text(
                         text = formatCurrency(monthlySalary),
                         style = MaterialTheme.typography.titleLarge.copy(
-                            color = Color(0xFF2E7D32), // Green
+                            color = Color(0xFF2E7D32), 
                             fontWeight = FontWeight.Bold
                         )
                     )
@@ -412,27 +400,24 @@ fun SalaryDetailsCard(monthlySalary: Double, totalAdvances: Double, netSalary: D
             Divider(color = Color.LightGray.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Bottom Row: Total Advances & Net Salary
             Row(modifier = Modifier.fillMaxWidth()) {
-                // Total Advances
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Total Advances", style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray))
                     Text(
                         text = formatCurrency(totalAdvances),
                         style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color(0xFFD32F2F), // Red
+                            color = Color(0xFFD32F2F), 
                             fontWeight = FontWeight.Bold
                         )
                     )
                 }
 
-                // Net Salary
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Net Salary", style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray))
                     Text(
                         text = formatCurrency(netSalary),
                         style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color(0xFF2E7D32), // Green
+                            color = Color(0xFF2E7D32), 
                             fontWeight = FontWeight.Bold
                         )
                     )
@@ -453,7 +438,6 @@ fun AdvancePaymentsCard(advances: List<EmployeeAdvance>, onAddClick: () -> Unit,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -476,7 +460,6 @@ fun AdvancePaymentsCard(advances: List<EmployeeAdvance>, onAddClick: () -> Unit,
                     )
                 }
 
-                // Add Button
                 FloatingActionButton(
                     onClick = onAddClick,
                     containerColor = Color(0xFFFF6F00),
@@ -490,7 +473,6 @@ fun AdvancePaymentsCard(advances: List<EmployeeAdvance>, onAddClick: () -> Unit,
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // List of Payments
             if (advances.isEmpty()) {
                 Text("No payment history recorded.", style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray))
             } else {
@@ -535,7 +517,6 @@ fun AdvancePaymentsCard(advances: List<EmployeeAdvance>, onAddClick: () -> Unit,
                                 )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            // Revoke button
                             IconButton(onClick = { onRevokeClick(payment.id) }, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.Default.Delete, contentDescription = "Revoke", tint = Color.LightGray, modifier = Modifier.size(16.dp))
                             }
@@ -642,6 +623,5 @@ fun formatCurrency(amount: Double): String {
     val format = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
     val formattedStr = format.format(amount)
     
-    // Replace standard ₹ sign and handle spacing issues for custom UI needs
     return formattedStr.replace("₹", "₹")
 }

@@ -25,7 +25,6 @@ object CsvExporter {
         val stringBuilder = StringBuilder()
         stringBuilder.append(csvHeader)
 
-        // Get logs for the specific date
         val logs = StudentRepository.getAttendanceForDate(date.timeInMillis)
         
         if (logs.isEmpty()) {
@@ -40,7 +39,6 @@ object CsvExporter {
             val mealType = log.mealType
             val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(log.timestamp))
             
-            // Simplified row for daily log: Name, ID, MealType, Time
             stringBuilder.append("$studentName,$studentId,$mealType,-,-,-,$time\n")
         }
 
@@ -58,8 +56,6 @@ object CsvExporter {
         val students = StudentRepository.students
 
         students.forEach { student ->
-            // Note: Ideally we should filter counts by month, but current Repository stores total counts.
-            // For now, we export current snapshot as per existing data model limits.
             
             val totalMeals = student.breakfastCount + student.lunchCount + student.dinnerCount
             
@@ -75,60 +71,44 @@ object CsvExporter {
 
         val stringBuilder = StringBuilder()
 
-        // --- SECTION 1: STUDENTS ---
-        stringBuilder.append("=== STUDENT REPORT ===\n")
-        stringBuilder.append("Student Name,Meals Left (B),Meals Left (L),Meals Left (D),Sun Specials,Payments This Month\n")
+        val downloadDateStr = SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault()).format(Date())
+        stringBuilder.append("____date of downloading file___\n")
+        stringBuilder.append("$downloadDateStr\n\n")
+
+        stringBuilder.append("____for student _____\n")
+        stringBuilder.append("student name,sl. no.,plates left (b l d),plates eaten (b d l),last month payment date,last month payment amount\n")
         
         val students = StudentRepository.students
+        var slNo = 1
         
-        // Let's filter payments for this specific month for the report
-        val reportMonth = date.get(Calendar.MONTH)
-        val reportYear = date.get(Calendar.YEAR)
-
         students.forEach { student ->
-            // Calculate total payments this month for this student
             val payments = StudentRepository.getPaymentHistory(student.id)
-            var amountPaidThisMonth = 0
+            var lastPaymentDateStr = "-"
+            var lastPaymentAmountStr = "-"
             
-            payments.forEach { payment ->
-                val pDate = Calendar.getInstance().apply { timeInMillis = payment.date }
-                if (pDate.get(Calendar.MONTH) == reportMonth && pDate.get(Calendar.YEAR) == reportYear) {
-                    amountPaidThisMonth += payment.amount
-                }
+            if (payments.isNotEmpty()) {
+                val lastPayment = payments.first() 
+                lastPaymentDateStr = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date(lastPayment.date))
+                lastPaymentAmountStr = lastPayment.amount.toString()
             }
 
-            stringBuilder.append("${student.name},${student.remainingBreakfasts},${student.remainingLunches},${student.remainingDinners},${student.remainingSundayMeals},Rs. $amountPaidThisMonth\n")
+            val platesLeft = "${student.remainingBreakfasts} ${student.remainingLunches} ${student.remainingDinners}"
+            val platesEaten = "${student.breakfastCount} ${student.dinnerCount} ${student.lunchCount}"
+
+            stringBuilder.append("${student.name},$slNo,$platesLeft,$platesEaten,$lastPaymentDateStr,$lastPaymentAmountStr\n")
+            slNo++
         }
 
-        stringBuilder.append("\n\n") // Blank lines to separate sections
+        stringBuilder.append("\n\n") 
         
-        // --- SECTION 2: EMPLOYEES ---
-        stringBuilder.append("=== EMPLOYEE REPORT ===\n")
-        stringBuilder.append("Employee Name,Monthly Salary,Total Advance Paid,Payment History\n")
+        stringBuilder.append("____for employee____\n")
+        stringBuilder.append("employee name,role,salary,advance given,net salary\n")
         
         val employees = StudentRepository.employees
-        val formatter = SimpleDateFormat("dd MMM", Locale.getDefault())
 
         employees.forEach { employee ->
-            val advances = StudentRepository.getEmployeeAdvances(employee.id)
-            var totalAdvancePaidThisMonth = 0.0
-            val historyBuilder = StringBuilder()
-
-            advances.forEach { payment ->
-                 val pDate = Calendar.getInstance().apply { timeInMillis = payment.date }
-                 if (pDate.get(Calendar.MONTH) == reportMonth && pDate.get(Calendar.YEAR) == reportYear) {
-                     if (!payment.isSalaryPayment) {
-                         totalAdvancePaidThisMonth += payment.amount
-                     }
-                     val type = if (payment.isSalaryPayment) "[Salary]" else "[Advance]"
-                     historyBuilder.append("$type Rs.${payment.amount} on ${formatter.format(Date(payment.date))} | ")
-                 }
-            }
-            
-            val historyStr = if (historyBuilder.isNotEmpty()) historyBuilder.toString().dropLast(3) else "No payments this month"
-            
-            // Note: Wrapping history in quotes handles commas inside the string for CSV format
-            stringBuilder.append("${employee.name},Rs. ${employee.monthlySalary},Rs. $totalAdvancePaidThisMonth,\"$historyStr\"\n")
+            val netSalary = maxOf(0.0, employee.monthlySalary - employee.totalAdvances)
+            stringBuilder.append("${employee.name},${employee.role},${employee.monthlySalary},${employee.totalAdvances},$netSalary\n")
         }
 
         saveCsv(context, fileName, stringBuilder.toString())
@@ -155,7 +135,6 @@ object CsvExporter {
                      Toast.makeText(context, "Failed to create file", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                // Legacy
                 val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 val file = File(downloadsDir, fileName)
                 FileOutputStream(file).use {
