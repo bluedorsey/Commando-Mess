@@ -16,10 +16,10 @@ class AuthViewModel : ViewModel() {
             return
         }
 
-        if (username == "kuldeep@admin" && password == "1234") {
+        if (username == "" && password == "") {
             loginError = null
             onSuccess(true) 
-        } else if (username == "user" && password == "user") {
+        } else if (username == "" && password == "") {
             loginError = null
             onSuccess(false) 
         } else {
